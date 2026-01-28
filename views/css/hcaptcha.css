@@ -1,0 +1,27 @@
+/**
+ * Styles for the hCaptcha module
+ *
+ * @author Dylan Ramos - drSoft.fr
+ * @copyright 2026 drSoft.fr
+ * @license MIT
+ */
+
+/* hCaptcha widget container */
+.hcaptcha-container {
+  clear: both;
+  margin: 1rem 0;
+  text-align: center;
+}
+
+/* Responsive - Mobile */
+@media (min-width: 768px) {
+  .hcaptcha-container {
+    text-align: unset;
+  }
+}
+
+/* Centering the hCaptcha widget */
+.hcaptcha-container .h-captcha {
+  display: inline-block;
+  margin: 0 auto;
+}

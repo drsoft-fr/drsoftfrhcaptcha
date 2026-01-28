@@ -19,11 +19,13 @@ config*.xml
 /views/.vite/*
 !/views/.vite/index.php
 /views/css/*
+!/views/css/hcaptcha.css
 !/views/css/index.php
 /views/img/*
 !/views/img/index.php
 !/views/img/logo-dark-master.png
 /views/js/*
+!/views/js/hcaptcha.js
 !/views/js/index.php
 /views/map/
 ###< views ###
