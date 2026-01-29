@@ -211,11 +211,6 @@
       // Mark as initialized immediately to prevent double processing
       elements.widget.dataset.hcaptchaInitialized = "true";
 
-      // Configure the button
-      submitBtn.disabled = true;
-      submitBtn.classList.add("disabled");
-      submitBtn.dataset.hcaptchaRequired = "true";
-
       // Render the widget if hCaptcha API is already loaded
       if (typeof hcaptcha !== "undefined") {
         elements.widget.dataset.hcaptchaRendered = "true";
@@ -266,38 +261,6 @@
     },
 
     /**
-     * Enable the submit button of a form
-     */
-    enableSubmit: function (form) {
-      if (!form) {
-        return;
-      }
-
-      var submitBtn = this.findSubmitButton(form);
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.classList.remove("disabled");
-      }
-
-      this.hideError(form);
-    },
-
-    /**
-     * Disable the submit button of a form
-     */
-    disableSubmit: function (form) {
-      if (!form) {
-        return;
-      }
-
-      var submitBtn = this.findSubmitButton(form);
-      if (submitBtn && submitBtn.dataset.hcaptchaRequired === "true") {
-        submitBtn.disabled = true;
-        submitBtn.classList.add("disabled");
-      }
-    },
-
-    /**
      * Initialize all hCaptcha widgets present on the page
      */
     initWidgets: function () {
@@ -317,14 +280,6 @@
         // First-time setup (submit button config, callbacks, validation)
         if (widget.dataset.hcaptchaInitialized !== "true") {
           widget.dataset.hcaptchaInitialized = "true";
-
-          var submitBtn = self.findSubmitButton(form);
-          if (submitBtn) {
-            // Configure the button
-            submitBtn.dataset.hcaptchaRequired = "true";
-            submitBtn.disabled = true;
-            submitBtn.classList.add("disabled");
-          }
 
           // Add callbacks if not defined
           if (!widget.hasAttribute("data-callback")) {
@@ -481,26 +436,16 @@
 
       if (response && response.value === token) {
         var form = DrsoftHCaptcha.findParentForm(widget);
-        DrsoftHCaptcha.enableSubmit(form);
+        DrsoftHCaptcha.hideError(form);
       }
     });
   };
 
   /**
    * Global callback - Captcha expired
+   * Required as a global function because hCaptcha API calls it via data-expired-callback
    */
-  window.onHCaptchaExpired = function () {
-    var widgets = document.querySelectorAll(".h-captcha");
-
-    widgets.forEach(function (widget) {
-      var response = widget.querySelector('[name="h-captcha-response"]');
-
-      if (!response || !response.value) {
-        var form = DrsoftHCaptcha.findParentForm(widget);
-        DrsoftHCaptcha.disableSubmit(form);
-      }
-    });
-  };
+  window.onHCaptchaExpired = function () {};
 
   /**
    * Global callback - Error
