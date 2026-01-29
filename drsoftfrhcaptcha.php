@@ -498,15 +498,13 @@ class drsoftfrhcaptcha extends Module
         }
 
         // Build list of forms to auto-inject (dynamic injection via JS)
+        // No controller type check: forms can be embedded on any page
+        // The JS uses CSS selectors to find forms, so injection only occurs if the form exists
         $enabledForms = [];
-        if ($this->context->controller instanceof AuthController
-            && Configuration::get('DRSOFT_FR_HCAPTCHA_LOGIN_ENABLED')
-        ) {
+        if (Configuration::get('DRSOFT_FR_HCAPTCHA_LOGIN_ENABLED')) {
             $enabledForms[] = 'login';
         }
-        if ($this->context->controller instanceof ContactController
-            && Configuration::get('DRSOFT_FR_HCAPTCHA_CONTACT_ENABLED')
-        ) {
+        if (Configuration::get('DRSOFT_FR_HCAPTCHA_CONTACT_ENABLED')) {
             $enabledForms[] = 'contact';
         }
 
