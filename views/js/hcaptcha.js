@@ -214,15 +214,19 @@
       // Render the widget if hCaptcha API is already loaded
       if (typeof hcaptcha !== "undefined") {
         elements.widget.dataset.hcaptchaRendered = "true";
-        hcaptcha.render(elements.widget, {
-          sitekey: options.siteKey || config.siteKey,
-          theme: options.theme || config.theme || "light",
-          size: options.size || config.size || "normal",
-          callback: window[options.callback || "onHCaptchaSuccess"],
-          "expired-callback":
-            window[options.expiredCallback || "onHCaptchaExpired"],
-          "error-callback": window[options.errorCallback || "onHCaptchaError"],
-        });
+        elements.widget.dataset.hcaptchaWidgetId = hcaptcha.render(
+          elements.widget,
+          {
+            sitekey: options.siteKey || config.siteKey,
+            theme: options.theme || config.theme || "light",
+            size: options.size || config.size || "normal",
+            callback: window[options.callback || "onHCaptchaSuccess"],
+            "expired-callback":
+              window[options.expiredCallback || "onHCaptchaExpired"],
+            "error-callback":
+              window[options.errorCallback || "onHCaptchaError"],
+          },
+        );
       }
 
       // Add validation to submit
@@ -257,6 +261,16 @@
         }
 
         self.hideError(form);
+
+        // Reset hCaptcha widget after submission to allow resubmission on AJAX forms.
+        // Deferred to next tick so the AJAX handler captures form data before reset.
+        var widget = form.querySelector(".h-captcha");
+        if (widget && typeof hcaptcha !== "undefined") {
+          var widgetId = widget.dataset.hcaptchaWidgetId;
+          setTimeout(function () {
+            hcaptcha.reset(widgetId);
+          }, 100);
+        }
       });
     },
 
@@ -303,7 +317,7 @@
           widget.dataset.hcaptchaRendered !== "true"
         ) {
           widget.dataset.hcaptchaRendered = "true";
-          hcaptcha.render(widget, {
+          widget.dataset.hcaptchaWidgetId = hcaptcha.render(widget, {
             sitekey: widget.getAttribute("data-sitekey") || config.siteKey,
             theme: widget.getAttribute("data-theme") || config.theme || "light",
             size: widget.getAttribute("data-size") || config.size || "normal",
