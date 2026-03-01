@@ -14,6 +14,9 @@
   var config =
     typeof drsoftHcaptchaConfig !== "undefined" ? drsoftHcaptchaConfig : {};
 
+  // Flag: true only after hcaptchaOnLoad confirms the API is fully ready
+  var apiReadyCalled = false;
+
   /**
    * Global namespace for reusable functions
    */
@@ -211,8 +214,8 @@
       // Mark as initialized immediately to prevent double processing
       elements.widget.dataset.hcaptchaInitialized = "true";
 
-      // Render the widget if hCaptcha API is already loaded
-      if (typeof hcaptcha !== "undefined") {
+      // Render the widget only if hCaptcha API is confirmed ready (via hcaptchaOnLoad)
+      if (apiReadyCalled && typeof hcaptcha !== "undefined") {
         elements.widget.dataset.hcaptchaRendered = "true";
         elements.widget.dataset.hcaptchaWidgetId = hcaptcha.render(
           elements.widget,
@@ -246,17 +249,45 @@
       form.dataset.hcaptchaValidation = "true";
       var self = this;
 
+      var getMessage = function () {
+        return (
+          errorMessage ||
+          (config.i18n && config.i18n.pleaseComplete
+            ? config.i18n.pleaseComplete
+            : "Please complete the captcha before submitting the form.")
+        );
+      };
+
+      // --- Click capture (primary validation) ---
+      // Runs in capture phase, BEFORE any bubbling-phase handler (including PS checkout
+      // Vue.js/AJAX handlers that set an internal isLoading state on click).
+      // If captcha is missing, the click is fully stopped before the framework sees it,
+      // so its loading state is never set and the button never becomes unresponsive.
+      var submitBtn = self.findSubmitButton(form);
+      if (submitBtn) {
+        submitBtn.addEventListener(
+          "click",
+          function (e) {
+            var response = form.querySelector('[name="h-captcha-response"]');
+            if (!response || !response.value) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+              self.showError(form, getMessage());
+            }
+          },
+          true, // capture phase
+        );
+      }
+
+      // --- Form submit event (fallback + reset) ---
+      // Covers programmatic submissions (form.submit()) not triggered by a button click.
+      // Also resets the widget after a successful AJAX submission.
       form.addEventListener("submit", function (e) {
         var response = form.querySelector('[name="h-captcha-response"]');
 
         if (!response || !response.value) {
           e.preventDefault();
-          e.stopPropagation();
-          var defaultMessage =
-            config.i18n && config.i18n.pleaseComplete
-              ? config.i18n.pleaseComplete
-              : "Please complete the captcha before submitting the form.";
-          self.showError(form, errorMessage || defaultMessage);
+          self.showError(form, getMessage());
           return false;
         }
 
@@ -313,6 +344,7 @@
         // Render if API is available and not yet rendered
         // (separated from init to handle widgets created before API was loaded)
         if (
+          apiReadyCalled &&
           typeof hcaptcha !== "undefined" &&
           widget.dataset.hcaptchaRendered !== "true"
         ) {
@@ -482,7 +514,7 @@
     var checkAPI = setInterval(function () {
       attempts++;
 
-      if (typeof hcaptcha !== "undefined") {
+      if (typeof hcaptcha !== "undefined" && typeof hcaptcha.render === "function") {
         clearInterval(checkAPI);
         callback();
       } else if (attempts >= maxAttempts) {
@@ -496,8 +528,14 @@
 
   /**
    * Handle hCaptcha API ready event
+   * Called only once: either from hcaptchaOnLoad (primary) or waitForHCaptchaAPI (fallback)
    */
   function onHCaptchaAPIReady() {
+    if (apiReadyCalled) {
+      return;
+    }
+    apiReadyCalled = true;
+
     DrsoftHCaptcha.initWidgets();
     DrsoftHCaptcha.autoInjectForms();
 

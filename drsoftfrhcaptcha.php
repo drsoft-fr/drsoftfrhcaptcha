@@ -48,6 +48,25 @@ class drsoftfrhcaptcha extends Module
     ];
 
     /**
+     * Per-hook validation result cache.
+     * hCaptcha tokens are single-use: caching prevents a second API call on the same
+     * token when a hook is dispatched more than once per request (e.g. OrderControllerCore
+     * re-dispatches actionSubmitAccountBefore after our override already called it).
+     *
+     * @var bool|null
+     */
+    private $registerValidationResult = null;
+
+    /** @var bool|null */
+    private $loginValidationResult = null;
+
+    /** @var bool|null */
+    private $contactValidationResult = null;
+
+    /** @var bool|null */
+    private $newsletterValidationResult = null;
+
+    /**
      * @var string $authorEmail Author email
      */
     public $authorEmail;
@@ -69,7 +88,7 @@ class drsoftfrhcaptcha extends Module
     {
         $this->name = 'drsoftfrhcaptcha';
         $this->tab = 'front_office_features';
-        $this->version = '1.0.0';
+        $this->version = '1.0.2';
         $this->author = 'drSoft.fr';
         $this->need_instance = 0;
         $this->ps_versions_compliancy = [
@@ -571,6 +590,11 @@ class drsoftfrhcaptcha extends Module
 
     /**
      * Hook before account creation
+     *
+     * The result is cached to prevent double hCaptcha API calls: our OrderController
+     * override calls this method directly, then OrderControllerCore dispatches the
+     * native actionSubmitAccountBefore hook which calls it a second time.
+     * Since hCaptcha tokens are single-use, the second API call would always fail.
      */
     public function hookActionSubmitAccountBefore($params): bool
     {
@@ -578,7 +602,13 @@ class drsoftfrhcaptcha extends Module
             return true;
         }
 
-        return $this->validateHCaptcha();
+        if ($this->registerValidationResult !== null) {
+            return $this->registerValidationResult;
+        }
+
+        $this->registerValidationResult = $this->validateHCaptcha();
+
+        return $this->registerValidationResult;
     }
 
     /**
@@ -590,7 +620,13 @@ class drsoftfrhcaptcha extends Module
             return true;
         }
 
-        return $this->validateHCaptcha();
+        if ($this->loginValidationResult !== null) {
+            return $this->loginValidationResult;
+        }
+
+        $this->loginValidationResult = $this->validateHCaptcha();
+
+        return $this->loginValidationResult;
     }
 
     /**
@@ -602,7 +638,13 @@ class drsoftfrhcaptcha extends Module
             return true;
         }
 
-        return $this->validateHCaptcha();
+        if ($this->contactValidationResult !== null) {
+            return $this->contactValidationResult;
+        }
+
+        $this->contactValidationResult = $this->validateHCaptcha();
+
+        return $this->contactValidationResult;
     }
 
     /**
@@ -626,9 +668,13 @@ class drsoftfrhcaptcha extends Module
             return true;
         }
 
-        $result = $this->validateHCaptcha();
+        if ($this->newsletterValidationResult !== null) {
+            return $this->newsletterValidationResult;
+        }
 
-        if (false === $result) {
+        $this->newsletterValidationResult = $this->validateHCaptcha();
+
+        if (false === $this->newsletterValidationResult) {
             $params['hookError'] = $this->trans(
                 'Captcha verification failed. Please try again.',
                 [],
@@ -637,7 +683,6 @@ class drsoftfrhcaptcha extends Module
 
             return false;
         }
-
 
         return true;
     }
